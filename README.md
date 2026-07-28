@@ -1,5 +1,9 @@
 # Bella Review Action
 
+<p align="center">
+  <img src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExczlkOTEyaWd2dDZuano0Nm1keW10M3JzOHExbWt4aTdkdGt2Ynl1NCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/XrocL0zuteSUU/giphy.gif" alt="Bella" width="280">
+</p>
+
 GitHub Action que calcula o diff completo de um Pull Request e envia para revisão automática pela [Bella Reviewer](https://github.com/Natan-Lucena/bella-reviewer-api). A Action só confirma o envio — a revisão em si roda de forma assíncrona, e os comentários aparecem no PR alguns minutos depois.
 
 ## Uso

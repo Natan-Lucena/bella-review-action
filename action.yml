@@ -11,7 +11,7 @@ inputs:
   api-url:
     description: "URL base do backend da Bella Reviewer."
     required: false
-    default: "https://api.bellareviewer.example"
+    default: "https://bella-reviewer-api.vercel.app"
   github-token:
     description: "Token usado para ler os arquivos alterados do Pull Request via API do GitHub. O token automático do job já é suficiente (precisa de permissão de leitura em pull-requests)."
     required: false

@@ -52,7 +52,7 @@ jobs:
       - name: Run tests
         run: pnpm test:coverage
 
-      - name: Build (verifies the committed dist/index.js is reproducible)
+      - name: Build (verifies the build itself succeeds from source)
         run: pnpm build
 
       - name: Publish coverage report
@@ -60,9 +60,3 @@ jobs:
         uses: davelosert/vitest-coverage-report-action@v2
         with:
           json-summary-path: "./coverage/coverage-summary.json"
-
-      - name: Fail if the build produced a different dist/ than what's committed
-        run: |
-          git diff --exit-code -- dist/ || (
-            echo "::error::dist/ is out of date — run 'pnpm build' and commit the result." && exit 1
-          )

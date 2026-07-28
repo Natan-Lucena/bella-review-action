@@ -1,0 +1,68 @@
+name: Action CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      pull-requests: write
+      contents: read
+
+    strategy:
+      matrix:
+        # pnpm 11.x itself requires Node >= 22.13 (it uses node:sqlite
+        # internally) — it fails at "pnpm install" under Node 20.x regardless
+        # of this repo's own engines.node, so 20.x can't be in this matrix as
+        # long as we're on pnpm 11. The Action itself still targets Node 20
+        # at runtime (action.yml's `runs.using: node20`) — that's the
+        # GitHub-provided Node used to execute the bundled dist/index.js when
+        # someone installs this Action, unrelated to what CI builds/tests it
+        # with.
+        node-version: [22.x, 24.x]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.8.0
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Run tests
+        run: pnpm test:coverage
+
+      - name: Build (verifies the committed dist/index.js is reproducible)
+        run: pnpm build
+
+      - name: Publish coverage report
+        if: always()
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          json-summary-path: "./coverage/coverage-summary.json"
+
+      - name: Fail if the build produced a different dist/ than what's committed
+        run: |
+          git diff --exit-code -- dist/ || (
+            echo "::error::dist/ is out of date — run 'pnpm build' and commit the result." && exit 1
+          )

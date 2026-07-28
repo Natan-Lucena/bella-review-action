@@ -1,0 +1,38 @@
+{
+  "name": "bella-review-action",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GitHub Action que calcula o diff completo de um Pull Request e o envia para revisão pela Bella Reviewer.",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@11.8.0",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && ncc build lib/main.js -o dist",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/github": "^6.0.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@types/node": "^22.10.5",
+    "@vercel/ncc": "^0.38.3",
+    "@vitest/coverage-v8": "^2.1.9",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.19.1",
+    "vitest": "^2.1.8",
+    "vitest-mock-extended": "^5.1.0"
+  }
+}

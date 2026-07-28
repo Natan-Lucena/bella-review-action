@@ -1,0 +1,21 @@
+name: "Bella Reviewer"
+description: "Envia o diff do Pull Request para revisão automática pela Bella Reviewer."
+author: "Natan Lucena"
+branding:
+  icon: "eye"
+  color: "purple"
+inputs:
+  bella-token:
+    description: "Token de autenticação do repositório (BELLA_TOKEN), gerado no painel/API da Bella Reviewer."
+    required: true
+  api-url:
+    description: "URL base do backend da Bella Reviewer."
+    required: false
+    default: "https://api.bellareviewer.example"
+  github-token:
+    description: "Token usado para ler os arquivos alterados do Pull Request via API do GitHub. O token automático do job já é suficiente (precisa de permissão de leitura em pull-requests)."
+    required: false
+    default: ${{ github.token }}
+runs:
+  using: "node20"
+  main: "dist/index.js"

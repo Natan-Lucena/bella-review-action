@@ -65,20 +65,26 @@ describe("extractPullRequestMetadata", () => {
     expect(metadata?.author).toBeUndefined();
   });
 
-  it("ignores action/before on the payload today — not extracted yet", () => {
+  it("extracts previousCommitSha from `before` when action is synchronize", () => {
     const metadata = extractPullRequestMetadata(
       validPayload({ action: "synchronize", before: "f6e5d4c3" }),
     );
 
-    expect(metadata).toEqual({
-      owner: "some-org",
-      repo: "some-repo",
-      prNumber: 42,
-      commitSha: "abc123",
-      author: "octocat",
-      prTitle: "Fix pagination bug",
-      prDescription: "Callers assumed the old offset semantics.",
-    });
+    expect(metadata?.previousCommitSha).toBe("f6e5d4c3");
+  });
+
+  it("leaves previousCommitSha undefined when action is opened — no meaningful 'previous commit' for a PR's first review", () => {
+    const metadata = extractPullRequestMetadata(
+      validPayload({ action: "opened", before: "f6e5d4c3" }),
+    );
+
+    expect(metadata?.previousCommitSha).toBeUndefined();
+  });
+
+  it("leaves previousCommitSha undefined when the payload has no action at all", () => {
+    const metadata = extractPullRequestMetadata(validPayload());
+
+    expect(metadata?.previousCommitSha).toBeUndefined();
   });
 
   it("returns null for an event without pull_request", () => {

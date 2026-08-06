@@ -8,6 +8,7 @@ export type CallIngestionApiParams = {
   author?: string;
   prTitle?: string;
   prDescription?: string;
+  previousCommitSha?: string;
   diff: Diff;
 };
 
@@ -33,6 +34,7 @@ export async function callIngestionApi(
     author: params.author,
     prTitle: params.prTitle,
     prDescription: params.prDescription,
+    previousCommitSha: params.previousCommitSha,
     diff: params.diff,
   };
 

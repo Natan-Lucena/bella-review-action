@@ -30191,6 +30191,7 @@ async function callIngestionApi(params) {
         author: params.author,
         prTitle: params.prTitle,
         prDescription: params.prDescription,
+        previousCommitSha: params.previousCommitSha,
         diff: params.diff,
     };
     let response;
@@ -30411,6 +30412,10 @@ function extractPullRequestMetadata(payload) {
         author: pr.user?.login ?? undefined,
         prTitle: pr.title,
         prDescription: pr.body ?? undefined,
+        // "opened"/"reopened" have no meaningful "previous commit" (it's the
+        // PR's first review) — leave the field undefined so it's omitted from
+        // the request body entirely, same convention as prDescription above.
+        previousCommitSha: typed.action === "synchronize" ? typed.before : undefined,
     };
 }
 //# sourceMappingURL=github-event.js.map
@@ -30485,6 +30490,7 @@ async function run() {
         author: metadata.author,
         prTitle: metadata.prTitle,
         prDescription: metadata.prDescription,
+        previousCommitSha: metadata.previousCommitSha,
         diff,
     });
     switch (result.kind) {

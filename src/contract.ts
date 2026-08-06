@@ -31,6 +31,7 @@ export type IngestActionRequestBody = {
   author?: string;
   prTitle?: string;
   prDescription?: string;
+  previousCommitSha?: string;
   diff: Diff;
 };
 

@@ -32,6 +32,7 @@ async function run(): Promise<void> {
     author: metadata.author,
     prTitle: metadata.prTitle,
     prDescription: metadata.prDescription,
+    previousCommitSha: metadata.previousCommitSha,
     diff,
   });
 

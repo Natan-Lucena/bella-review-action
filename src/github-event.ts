@@ -12,9 +12,14 @@ export type PullRequestEventMetadata = {
   author?: string;
   prTitle: string;
   prDescription?: string;
+  previousCommitSha?: string;
 };
 
 type RawPullRequestEventPayload = {
+  action?: string;
+  // Only present when action === "synchronize" — the commit at the tip of
+  // the PR right before this push.
+  before?: string;
   pull_request?: {
     number: number;
     head: { sha: string };
@@ -49,5 +54,9 @@ export function extractPullRequestMetadata(payload: unknown): PullRequestEventMe
     author: pr.user?.login ?? undefined,
     prTitle: pr.title,
     prDescription: pr.body ?? undefined,
+    // "opened"/"reopened" have no meaningful "previous commit" (it's the
+    // PR's first review) — leave the field undefined so it's omitted from
+    // the request body entirely, same convention as prDescription above.
+    previousCommitSha: typed.action === "synchronize" ? typed.before : undefined,
   };
 }

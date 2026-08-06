@@ -57,6 +57,26 @@ describe("callIngestionApi", () => {
     });
   });
 
+  it("includes previousCommitSha in the body when present, and omits the key entirely when absent", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ id: "run-1", status: "queued", commitSha: "abc123" }, 202),
+    );
+
+    await callIngestionApi({ ...baseParams, previousCommitSha: "f6e5d4c3" });
+
+    const [, initWith] = fetchMock.mock.calls[0];
+    expect(JSON.parse(initWith.body as string)).toMatchObject({ previousCommitSha: "f6e5d4c3" });
+
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ id: "run-1", status: "queued", commitSha: "abc123" }, 202),
+    );
+
+    await callIngestionApi(baseParams);
+
+    const [, initWithout] = fetchMock.mock.calls[1];
+    expect(JSON.parse(initWithout.body as string)).not.toHaveProperty("previousCommitSha");
+  });
+
   it("treats 200 (idempotent, already existed) as success too", async () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse({ id: "run-1", status: "processing", commitSha: "abc123" }, 200),

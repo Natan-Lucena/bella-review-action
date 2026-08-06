@@ -65,6 +65,22 @@ describe("extractPullRequestMetadata", () => {
     expect(metadata?.author).toBeUndefined();
   });
 
+  it("ignores action/before on the payload today — not extracted yet", () => {
+    const metadata = extractPullRequestMetadata(
+      validPayload({ action: "synchronize", before: "f6e5d4c3" }),
+    );
+
+    expect(metadata).toEqual({
+      owner: "some-org",
+      repo: "some-repo",
+      prNumber: 42,
+      commitSha: "abc123",
+      author: "octocat",
+      prTitle: "Fix pagination bug",
+      prDescription: "Callers assumed the old offset semantics.",
+    });
+  });
+
   it("returns null for an event without pull_request", () => {
     expect(
       extractPullRequestMetadata({ repository: { name: "x", owner: { login: "y" } } }),

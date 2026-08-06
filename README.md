@@ -30,14 +30,16 @@ O bloco `permissions: pull-requests: read` é necessário — o token automátic
 
 ## De onde vem o `BELLA_TOKEN`
 
-Gerado uma única vez, chamando a API da Bella Reviewer para o repositório já cadastrado:
+O jeito mais simples é pelo [painel web](https://github.com/Natan-Lucena/bella-review-web): cadastre o repositório, gere o token na tela de configurações e cole o valor como secret — o próprio wizard leva direto para a tela certa de secrets do GitHub (`Settings → Secrets and variables → Actions → New repository secret`, nome `BELLA_TOKEN`). O painel também consegue abrir automaticamente um Pull Request instalando este workflow no repositório, sem precisar colar o YAML manualmente.
+
+Sem o painel, o mesmo token pode ser gerado chamando a API diretamente:
 
 ```
 POST /repos/:id/action-token
 Authorization: Bearer <sessão do usuário>
 ```
 
-A resposta traz o token em texto plano **uma única vez** — copie e configure como secret do repositório (`Settings → Secrets and variables → Actions → New repository secret`, nome `BELLA_TOKEN`). Se perder o valor, é preciso gerar um novo (o backend guarda só o hash, nunca o texto plano de volta).
+De uma forma ou de outra, o token aparece em texto plano **uma única vez** — copie na hora. Se perder o valor, é preciso gerar um novo (o backend guarda só o hash, nunca o texto plano de volta).
 
 ## Inputs
 
@@ -49,4 +51,4 @@ A resposta traz o token em texto plano **uma única vez** — copie e configure 
 
 ## O que esperar depois de instalar
 
-O step fica verde assim que o backend confirma o recebimento — isso **não** significa que a revisão terminou, só que foi aceita para processamento. Os comentários de revisão aparecem no Pull Request de forma assíncrona; o histórico completo de execuções fica disponível consultando a API do backend (`GET /repos/:id/review-runs`).
+O step fica verde assim que o backend confirma o recebimento — isso **não** significa que a revisão terminou, só que foi aceita para processamento. Os comentários de revisão aparecem no Pull Request de forma assíncrona, alguns minutos depois. Comentários com uma correção concreta e local vêm como um bloco "Apply suggestion" nativo do GitHub — um clique já aplica a mudança, e a Bella reconcilia sozinha se cada sugestão foi de fato adotada. O histórico completo de execuções, comentários e métricas de aceitação fica disponível no [painel web](https://github.com/Natan-Lucena/bella-review-web) ou consultando a API do backend diretamente (`GET /repos/:id/review-runs`).

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { extractPullRequestMetadata } from "./github-event";
+import { extractCommentReplyMetadata, extractPullRequestMetadata } from "./github-event";
 
 function validPayload(overrides: Record<string, unknown> = {}) {
   return {
@@ -95,5 +95,97 @@ describe("extractPullRequestMetadata", () => {
 
   it("returns null for an event without repository", () => {
     expect(extractPullRequestMetadata({ pull_request: validPayload().pull_request })).toBeNull();
+  });
+});
+
+function validCommentReplyPayload(overrides: Record<string, unknown> = {}) {
+  return {
+    action: "created",
+    comment: {
+      id: 10,
+      in_reply_to_id: 5,
+      body: "Thanks, fixed!",
+      user: { login: "octocat" },
+    },
+    pull_request: {
+      number: 42,
+      title: "Fix pagination bug",
+      body: "Callers assumed the old offset semantics.",
+      head: { sha: "abc123" },
+    },
+    repository: {
+      name: "some-repo",
+      owner: { login: "some-org" },
+    },
+    ...overrides,
+  };
+}
+
+describe("extractCommentReplyMetadata", () => {
+  it("extracts every field from a well-formed comment-reply event", () => {
+    const metadata = extractCommentReplyMetadata(validCommentReplyPayload());
+
+    expect(metadata).toEqual({
+      owner: "some-org",
+      repo: "some-repo",
+      prNumber: 42,
+      commitSha: "abc123",
+      commentId: 10,
+      inReplyToId: 5,
+      humanBody: "Thanks, fixed!",
+      humanAuthor: "octocat",
+      prTitle: "Fix pagination bug",
+      prDescription: "Callers assumed the old offset semantics.",
+    });
+  });
+
+  it("keeps prDescription as null (not undefined) when the PR body is null", () => {
+    const metadata = extractCommentReplyMetadata(
+      validCommentReplyPayload({
+        pull_request: {
+          number: 42,
+          title: "Fix pagination bug",
+          body: null,
+          head: { sha: "abc123" },
+        },
+      }),
+    );
+
+    expect(metadata?.prDescription).toBeNull();
+  });
+
+  it("omits humanAuthor when the comment has no user login", () => {
+    const metadata = extractCommentReplyMetadata(
+      validCommentReplyPayload({ comment: { id: 10, in_reply_to_id: 5, body: "Thanks!" } }),
+    );
+
+    expect(metadata?.humanAuthor).toBeUndefined();
+  });
+
+  it("returns null when action is not 'created' (e.g. edited or deleted)", () => {
+    expect(extractCommentReplyMetadata(validCommentReplyPayload({ action: "edited" }))).toBeNull();
+    expect(extractCommentReplyMetadata(validCommentReplyPayload({ action: "deleted" }))).toBeNull();
+  });
+
+  it("returns null when the comment has no in_reply_to_id (a fresh top-level comment)", () => {
+    expect(
+      extractCommentReplyMetadata(
+        validCommentReplyPayload({ comment: { id: 10, body: "First comment on this PR" } }),
+      ),
+    ).toBeNull();
+  });
+
+  it("returns null when pull_request is missing", () => {
+    const payload = validCommentReplyPayload();
+    delete (payload as Record<string, unknown>).pull_request;
+
+    expect(extractCommentReplyMetadata(payload)).toBeNull();
+  });
+
+  it("returns null when repository is missing", () => {
+    const payload = validCommentReplyPayload();
+    delete (payload as Record<string, unknown>).repository;
+
+    expect(extractCommentReplyMetadata(payload)).toBeNull();
   });
 });

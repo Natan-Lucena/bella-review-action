@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { callIngestionApi } from "./api-client";
+import { callCommentReplyIngestionApi, callIngestionApi } from "./api-client";
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -126,5 +126,114 @@ describe("callIngestionApi", () => {
 
     expect(JSON.stringify(result)).not.toContain("super-secret-token");
     expect(JSON.stringify(result)).not.toContain("secret-file.ts");
+  });
+});
+
+describe("callCommentReplyIngestionApi", () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const baseParams = {
+    apiUrl: "https://api.bellareviewer.example",
+    bellaToken: "bt_secret",
+    owner: "some-org",
+    repo: "some-repo",
+    prNumber: 42,
+    commitSha: "abc123",
+    commentId: 10,
+    inReplyToId: 5,
+    humanBody: "Thanks, fixed!",
+    prTitle: "Fix pagination bug",
+    prDescription: "Details." as string | null,
+  };
+
+  it("posts to /ingestion/action/comment-replies with the bearer token and the built body", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ kind: "ignored" }, 202));
+
+    const result = await callCommentReplyIngestionApi({
+      ...baseParams,
+      humanAuthor: "octocat",
+    });
+
+    expect(result).toEqual({ kind: "success", body: { kind: "ignored" } });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://api.bellareviewer.example/ingestion/action/comment-replies");
+    expect(init.method).toBe("POST");
+    expect(init.headers.Authorization).toBe("Bearer bt_secret");
+    expect(JSON.parse(init.body as string)).toEqual({
+      prNumber: 42,
+      commitSha: "abc123",
+      commentId: 10,
+      inReplyToId: 5,
+      humanBody: "Thanks, fixed!",
+      humanAuthor: "octocat",
+      prTitle: "Fix pagination bug",
+      prDescription: "Details.",
+    });
+    // owner/repo are part of the shared metadata type but aren't part of
+    // the backend's request-body contract — must not leak into the body.
+    expect(JSON.parse(init.body as string)).not.toHaveProperty("owner");
+    expect(JSON.parse(init.body as string)).not.toHaveProperty("repo");
+  });
+
+  it("sends prDescription: null (not omitted) when the PR body is null", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ kind: "ignored" }, 202));
+
+    await callCommentReplyIngestionApi({ ...baseParams, prDescription: null });
+
+    const [, init] = fetchMock.mock.calls[0];
+    expect(JSON.parse(init.body as string)).toHaveProperty("prDescription", null);
+  });
+
+  it("returns success with an accepted body when the backend accepts the reply", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ kind: "accepted", commentReply: { id: "cr-1", status: "queued" } }, 202),
+    );
+
+    const result = await callCommentReplyIngestionApi(baseParams);
+
+    expect(result).toEqual({
+      kind: "success",
+      body: { kind: "accepted", commentReply: { id: "cr-1", status: "queued" } },
+    });
+  });
+
+  it("returns http_error with the backend's own error message on 401", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ error: { code: "not_authenticated", message: "Invalid token" } }, 401),
+    );
+
+    const result = await callCommentReplyIngestionApi(baseParams);
+
+    expect(result).toEqual({ kind: "http_error", status: 401, message: "Invalid token" });
+  });
+
+  it("returns network_error when fetch itself throws", async () => {
+    fetchMock.mockRejectedValueOnce(new Error("ECONNREFUSED"));
+
+    const result = await callCommentReplyIngestionApi(baseParams);
+
+    expect(result).toEqual({ kind: "network_error", message: "ECONNREFUSED" });
+  });
+
+  it("never includes humanBody or the token in a thrown/returned error message", async () => {
+    fetchMock.mockRejectedValueOnce(new Error("network down"));
+
+    const result = await callCommentReplyIngestionApi({
+      ...baseParams,
+      bellaToken: "super-secret-token",
+      humanBody: "this contains a secret-looking string do-not-leak-me",
+    });
+
+    expect(JSON.stringify(result)).not.toContain("super-secret-token");
+    expect(JSON.stringify(result)).not.toContain("do-not-leak-me");
   });
 });

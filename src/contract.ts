@@ -40,3 +40,20 @@ export type IngestActionSuccessBody = {
   status: "queued" | "processing" | "completed" | "failed";
   commitSha: string;
 };
+
+// Contrato com o backend da Bella Reviewer para respostas a comentários
+// (POST /ingestion/action/comment-replies). Mesmo aviso de acima: nomes de
+// campo não são negociáveis, precisam bater com o schema Zod do backend.
+export type IngestActionCommentReplyRequestBody = {
+  prNumber: number;
+  commitSha: string;
+  commentId: number;
+  inReplyToId: number;
+  humanBody: string;
+  humanAuthor?: string;
+  prTitle: string;
+  prDescription: string | null;
+};
+
+export type IngestActionCommentReplySuccessBody =
+  { kind: "ignored" } | { kind: "accepted"; commentReply: { id: string; status: string } };

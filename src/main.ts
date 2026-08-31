@@ -1,14 +1,25 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 
-import { callIngestionApi } from "./api-client";
+import { callCommentReplyIngestionApi, callIngestionApi } from "./api-client";
 import { buildDiff } from "./diff/build-diff";
 import { OctokitFilesClient } from "./diff/github-files-client";
-import { extractPullRequestMetadata } from "./github-event";
+import { extractCommentReplyMetadata, extractPullRequestMetadata } from "./github-event";
 
 async function run(): Promise<void> {
   const bellaToken = core.getInput("bella-token", { required: true });
   const apiUrl = core.getInput("api-url", { required: false });
+
+  if (github.context.eventName === "pull_request_review_comment") {
+    await runCommentReplyFlow(bellaToken, apiUrl);
+    return;
+  }
+
+  if (github.context.eventName !== "pull_request") {
+    core.info(`Event "${github.context.eventName}" is not supported — nothing to do.`);
+    return;
+  }
+
   const githubToken = core.getInput("github-token", { required: true });
 
   const metadata = extractPullRequestMetadata(github.context.payload);
@@ -66,6 +77,33 @@ async function run(): Promise<void> {
         `Falha de rede ao chamar a API da Bella Reviewer: ${result.message}. ` +
           "Tente novamente mais tarde.",
       );
+      return;
+  }
+}
+
+// Independent from the flow above: reacts to a reply left on a comment
+// Bella left on a PR. No diff involved — just forwarding a few fields from
+// the pull_request_review_comment event to a different backend endpoint.
+async function runCommentReplyFlow(bellaToken: string, apiUrl: string): Promise<void> {
+  const metadata = extractCommentReplyMetadata(github.context.payload);
+  if (!metadata) {
+    core.info("Comment is not a relevant reply — nothing to do.");
+    return;
+  }
+
+  const result = await callCommentReplyIngestionApi({ apiUrl, bellaToken, ...metadata });
+
+  switch (result.kind) {
+    case "success":
+      core.info("Reply sent for processing.");
+      return;
+    case "http_error":
+    case "network_error":
+      // Deliberately NEVER core.setFailed here, unlike the main review flow.
+      // A conversational reply is a best-effort extra bolted onto existing
+      // CI — failing to process one reply should never put a red X on a
+      // PR every time someone replies to a comment.
+      core.warning(`Could not process the comment reply: ${result.message}`);
       return;
   }
 }
